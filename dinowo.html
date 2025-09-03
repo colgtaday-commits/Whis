@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Dinowo — Ultra v3 (Gerónimo Russi)</title>
+<style>
+:root{--bg1:#667eea;--bg2:#764ba2;--accent:#facc15}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;min-height:100vh;background:linear-gradient(135deg,var(--bg1),var(--bg2));color:#fff;display:flex;flex-direction:column}
+header{position:fixed;left:0;right:0;top:0;background:rgba(0,0,0,0.12);backdrop-filter:blur(6px);padding:1rem 1.5rem;display:flex;justify-content:space-between;align-items:center;z-index:300}
+header h1{margin:0;font-weight:900;cursor:pointer;background:linear-gradient(90deg,var(--accent),#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header-controls{display:flex;gap:.5rem;align-items:center}
+.btn{background:rgba(255,255,255,0.08);border:0;padding:.6rem .9rem;border-radius:.6rem;color:#fff;font-weight:700;cursor:pointer}
+.btn:hover{background:rgba(255,255,255,0.16)}
+.container{max-width:1100px;margin:0 auto;padding:6.4rem 1rem 2rem;flex:1}
+.content-section{display:none;opacity:0;transform:translateY(8px);transition:opacity .28s, transform .28s}
+.content-section.active{display:block;opacity:1;transform:translateY(0)}
+.grid{display:grid;gap:1rem}
+.grid-4{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.card{background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));padding:1.2rem;border-radius:12px;text-align:center;cursor:pointer;font-weight:800;transition:transform .18s}
+.card:hover{transform:translateY(-6px)}
+.lesson{background:rgba(255,255,255,0.04);padding:1rem;border-radius:10px;margin:.7rem 0;border:1px solid rgba(255,255,255,0.06)}
+.progress{height:10px;background:rgba(255,255,255,0.12);border-radius:999px;overflow:hidden;margin-top:.6rem}
+.fill{height:100%;background:linear-gradient(90deg,var(--accent),#ec4899);width:0;transition:width .6s}
+.small{font-size:.95rem;opacity:.92}
+.footer{padding:1rem;text-align:center;background:rgba(0,0,0,0.18);margin-top:1rem}
+.mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace}
+.cards{display:flex;flex-wrap:wrap;gap:.5rem}
+.pill{background:rgba(255,255,255,0.06);padding:.3rem .6rem;border-radius:999px}
+#splash{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#00000044,#00000022);z-index:500}
+.splash-card{width:min(760px,92vw);background:rgba(255,255,255,0.03);padding:2.2rem;border-radius:14px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,0.6)}
+.splash-title{font-size:2.6rem;font-weight:900;margin:0 0 .4rem;background:linear-gradient(90deg,var(--accent),#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.splash-sub{opacity:.95;margin:0 0 1.2rem}
+.splash-start{background:white;color:#222;padding:.8rem 1.2rem;border-radius:10px;font-weight:900;cursor:pointer;border:0;box-shadow:0 8px 30px rgba(0,0,0,0.25)}
+.indicator{opacity:.9;font-weight:700;margin-left:.6rem}
+@media (prefers-reduced-motion: reduce){*{animation:none;transition:none}}
+</style>
+</head>
+<body>
+<!-- Splash -->
+<div id="splash">
+  <div class="splash-card" role="dialog" aria-modal="true">
+    <div class="splash-title">DINOWO</div>
+    <div class="splash-sub">Aprende jugando — Menú de temas y juegos por materia</div>
+    <button class="splash-start" id="start-btn">Comenzar</button>
+  </div>
+</div>
+
+<header>
+  <h1 onclick="showSection('home')">🦖 Dinowo</h1>
+  <div class="header-controls">
+    <button class="btn" onclick="exportProgress()">Exportar Progreso</button>
+    <button class="btn" onclick="importProgress()">Importar</button>
+    <button class="btn" onclick="resetAll()">Restablecer Progreso</button>
+  </div>
+</header>
+
+<main class="container">
+  <!-- HOME -->
+  <section id="home" class="content-section active">
+    <h2 style="text-align:center;font-size:2rem;margin:.2rem 0 .6rem">Bienvenido a Dinowo</h2>
+    <p style="text-align:center;margin:0 0 1rem;opacity:.95">Selecciona una materia — dentro encontrarás Menú de Temas (5) y Menú de Juegos (4). Autor: <b>Gerónimo Russi</b></p>
+
+    <div class="grid grid-4" style="margin-bottom:1rem">
+      <div class="card" onclick="openSubject('matematicas')">➕ Matemáticas <span id="matematicas-ind" class="indicator"></span></div>
+      <div class="card" onclick="openSubject('ciencias')">🔬 Ciencias <span id="ciencias-ind" class="indicator"></span></div>
+      <div class="card" onclick="openSubject('sociales')">🌎 Sociales <span id="sociales-ind" class="indicator"></span></div>
+      <div class="card" onclick="openSubject('tecnologia')">💻 Tecnología <span id="tecnologia-ind" class="indicator"></span></div>
+    </div>
+
+  </section>
+
+  <!-- SUBJECT SHELL -->
+  <section id="subject-shell" class="content-section">
+    <button class="btn" onclick="showSection('home')">← Volver</button>
+    <h2 id="subject-title">Materia</h2>
+    <p id="subject-desc" class="small"></p>
+
+    <div style="display:flex;gap:1rem;margin-top:1rem">
+      <button class="btn" id="topics-btn">Temas</button>
+      <button class="btn" id="games-btn">Juegos</button>
+      <span id="subject-progress" class="small" style="margin-left:auto"></span>
+    </div>
+
+    <!-- Topics Menu -->
+    <div id="topics-menu" style="margin-top:1rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem"></div>
+
+    <!-- Topic Content -->
+    <div id="topic-area" style="margin-top:1.2rem;display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3 id="topic-title"></h3>
+        <div>
+          <button class="btn" id="listen-btn">🔊 Escuchar</button>
+          <button class="btn" onclick="stopSpeech()">⏹ Detener</button>
+        </div>
+      </div>
+      <div class="small" id="topic-indicator" style="margin-top:.4rem"></div>
+      <article class="lesson" id="topic-text" style="white-space:pre-wrap"></article>
+      <div style="margin-top:.6rem">
+        <button class="btn" onclick="backToTopics()">← Volver a temas</button>
+      </div>
+    </div>
+
+    <!-- Games Menu -->
+    <div id="games-menu" style="margin-top:1rem;display:none;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem"></div>
+
+    <!-- Game Area -->
+    <div id="game-area" style="margin-top:1.2rem;display:none"></div>
+
+  </section>
+
+  <section id="progress" class="content-section">
+    <button class="btn" onclick="showSection('home')">← Volver</button>
+    <h2>📊 Mi Progreso</h2>
+    <div id="progress-list" style="margin-top:1rem"></div>
+  </section>
+
+</main>
+
+<footer class="footer">© 2025 Gerónimo Russi — Todos los derechos reservados</footer>
+
+<script>
+/* Utilities */
+function showSection(id){
+  document.querySelectorAll('.content-section').forEach(s=>s.classList.remove('active'));
+  const el = document.getElementById(id);
+  if(el) el.classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+document.getElementById('start-btn').addEventListener('click', ()=>{ const s=document.getElementById('splash'); s.style.opacity=0; setTimeout(()=>s.style.display='none',480); showSection('home'); });
+
+/* Speech */
+function speak(text){
+  if(!('speechSynthesis' in window)) return alert('Tu navegador no soporta síntesis de voz.');
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang='es-ES'; u.rate=0.95;
+  window.speechSynthesis.speak(u);
+}
+function stopSpeech(){ if('speechSynthesis' in window) window.speechSynthesis.cancel(); }
+
+/* Storage */
+function saveProgress(key,val){ try{ localStorage.setItem('dinowo_'+key, JSON.stringify(val)); }catch{} }
+function loadProgress(key,def){ try{ const v=JSON.parse(localStorage.getItem('dinowo_'+key)); return v===null?def:v;}catch{return def;} }
+function resetAll(){ if(confirm('¿Borrar todo el progreso local?')){ Object.keys(localStorage).forEach(k=>{ if(k.startsWith('dinowo_')) localStorage.removeItem(k); }); alert('Progreso borrado'); location.reload(); } }
+function exportProgress(){
+  const obj={};
+  for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k.startsWith('dinowo_')) obj[k]=localStorage.getItem(k); }
+  const blob=new Blob([JSON.stringify(obj)],{type:'application/json'}); const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='dinowo_progress.json'; a.click(); URL.revokeObjectURL(url);
+}
+function importProgress(){ const inp=document.createElement('input'); inp.type='file'; inp.accept='application/json'; inp.onchange=e=>{ const f=e.target.files[0]; const r=new FileReader(); r.onload=ev=>{ try{ const obj=JSON.parse(ev.target.result); Object.keys(obj).forEach(k=>localStorage.setItem(k,obj[k])); alert('Progreso importado. Recarga la página.'); }catch{alert('Archivo inválido');} }; r.readAsText(f); }; inp.click(); }
+
+/* Subjects definition */
+const SUBJECTS = {
+  matematicas: {
+    title:'Matemáticas', desc:'Aritmética, Álgebra, Geometría, Estadística y Probabilidad.',
+    topics:[
+      {id:'aritmetica', title:'Aritmética básica', keywords:['suma','resta','multiplicación','división']},
+      {id:'algebra', title:'Álgebra elemental', keywords:['variables','ecuaciones','polinomios','despejar']},
+      {id:'geometria', title:'Geometría y medidas', keywords:['área','perímetro','ángulos','figuras']},
+      {id:'estadistica', title:'Estadística descriptiva', keywords:['media','mediana','moda','gráficos']},
+      {id:'probabilidad', title:'Probabilidad y combinatoria', keywords:['probabilidad','eventos','combinatoria','azar']},
+    ],
+    games:[
+      {id:'m_quiz', title:'Quiz matemático'},
+      {id:'m_mem', title:'Memoria numérica'},
+      {id:'m_order', title:'Ordena operaciones'},
+      {id:'m_puzzle', title:'Puzzle geométrico'}
+    ]
+  },
+  ciencias: {
+    title:'Ciencias', desc:'Biología, Física, Química, Ecología y métodos científicos.',
+    topics:[
+      {id:'biologia', title:'Biología celular y genética', keywords:['célula','ADN','genes','división celular']},
+      {id:'fisica', title:'Física: movimiento y energía', keywords:['fuerza','velocidad','energía','leyes']},
+      {id:'quimica', title:'Química y reacciones', keywords:['átomos','moléculas','reacción','tabla periódica']},
+      {id:'ecologia', title:'Ecología y medio ambiente', keywords:['ecosistema','biodiversidad','sostenibilidad','cadena alimenticia']},
+      {id:'metodos', title:'Métodos científicos', keywords:['hipótesis','experimentación','análisis','conclusiones']},
+    ],
+    games:[
+      {id:'s_quiz', title:'Quiz de ciencias'},
+      {id:'s_lab', title:'Laboratorio virtual'},
+      {id:'s_class', title:'Clasifica seres vivos'},
+      {id:'s_planet', title:'Adivina el planeta'}
+    ]
+  },
+  sociales: {
+    title:'Sociales', desc:'Historia, Geografía, Economía, Cultura y ciudadanía.',
+    topics:[
+      {id:'historia', title:'Historia universal', keywords:['civilizaciones','revoluciones','cronología','fuentes']},
+      {id:'geografia', title:'Geografía física y humana', keywords:['mapas','clima','población','recursos']},
+      {id:'economia', title:'Economía básica', keywords:['oferta','demanda','mercado','moneda']},
+      {id:'cultura', title:'Cultura y sociedad', keywords:['identidad','tradiciones','derechos','instituciones']},
+      {id:'ciudadania', title:'Ciudadanía y derechos', keywords:['leyes','participación','derechos','responsabilidades']},
+    ],
+    games:[
+      {id:'h_quiz', title:'Trivia histórica'},
+      {id:'h_map', title:'Mapa interactivo'},
+      {id:'h_timeline', title:'Ordena la cronología'},
+      {id:'h_person', title:'Personaje misterioso'}
+    ]
+  },
+  tecnologia: {
+    title:'Tecnología', desc:'Programación, Robótica, Redes, IA y ética tecnológica.',
+    topics:[
+      {id:'programacion', title:'Programación y lógica', keywords:['algoritmos','variables','condicionales','bucles']},
+      {id:'robotica', title:'Robótica y sensores', keywords:['sensores','actuadores','motores','control']},
+      {id:'redes', title:'Redes e Internet', keywords:['IP','protocolos','seguridad','servidores']},
+      {id:'ia', title:'Inteligencia artificial y ética', keywords:['IA','datos','privacidad','sesgos']},
+      {id:'innovacion', title:'Innovación y emprendimiento', keywords:['prototipos','diseño','evaluación','impacto']},
+    ],
+    games:[
+      {id:'t_pc', title:'Ensamblaje de PC'},
+      {id:'t_code', title:'Bloques de código'},
+      {id:'t_circuit', title:'Circuitos básicos'},
+      {id:'t_robot', title:'Robot instructivo'}
+    ]
+  }
+};
+
+/* Generate didactic long text ~420 words */
+function generateLongText(title, keywords){
+  const intro = `${title}. En este tema exploramos de forma didáctica conceptos clave: ${keywords.join(', ')}. La intención es ofrecer explicaciones claras, ejemplos y ejercicios que permitan entender y aplicar lo aprendido.`;
+  const parts = [intro];
+  const sections = [
+    `Conceptos básicos y definiciones: definimos términos esenciales y presentamos ejemplos sencillos para familiarizarse con el lenguaje técnico.`,
+    `Demostraciones y razonamiento: explicamos cómo se llega a las fórmulas o conclusiones principales mediante pasos claros y justificados.`,
+    `Aplicaciones: mostramos usos prácticos en la vida real y ejercicios aplicados que conectan teoría y práctica.`,
+    `Estrategias de estudio: sugerencias para practicar, ejercicios recomendados y errores frecuentes a evitar.`,
+    `Resumen: recapitulación de los puntos clave y recursos para profundizar.`
+  ];
+  for(let i=0;i<10;i++){
+    parts.push(sections[i%sections.length] + ` En particular, abordamos aspectos relacionados con ${keywords.slice(0,2).join(' y ')} y ejercicios representativos.`);
+  }
+  parts.push('Al terminar este tema, el estudiante debería poder explicar los conceptos con sus propias palabras y resolver problemas básicos aplicando las estrategias aprendidas.');
+  return parts.join('\n\n');
+}
+
+/* Rendering subject menus */
+let currentSubjectKey = null;
+function openSubject(key){
+  currentSubjectKey = key;
+  const data = SUBJECTS[key];
+  if(!data) return;
+  showSection('subject-shell');
+  document.getElementById('subject-title').innerText = data.title;
+  document.getElementById('subject-desc').innerText = data.desc;
+  document.getElementById('subject-progress').innerText = '';
+  // topics
+  const topicsMenu = document.getElementById('topics-menu'); topicsMenu.innerHTML='';
+  data.topics.forEach((t, idx)=>{
+    const b = document.createElement('div'); b.className='card';
+    b.innerHTML = `<div style="font-weight:900">${t.title}</div><div class="small" style="margin-top:.4rem">${t.keywords.join(', ')}</div><div class="small" style="margin-top:.6rem">Tema ${idx+1} de ${data.topics.length}</div>`;
+    b.onclick = ()=> openTopic(key, t, idx, data.topics.length);
+    topicsMenu.appendChild(b);
+  });
+  // games menu
+  const gamesMenu = document.getElementById('games-menu'); gamesMenu.innerHTML='';
+  data.games.forEach((g, idx)=>{
+    const b = document.createElement('div'); b.className='card';
+    b.innerHTML = `<div style="font-weight:900">${g.title}</div><div class="small" style="margin-top:.6rem">Juego ${idx+1} de ${data.games.length}</div>`;
+    b.onclick = ()=> openGame(key, g, idx, data.games.length);
+    gamesMenu.appendChild(b);
+  });
+
+  // show topics by default
+  document.getElementById('topics-menu').style.display='grid';
+  document.getElementById('games-menu').style.display='none';
+  document.getElementById('topic-area').style.display='none';
+  document.getElementById('game-area').style.display='none';
+
+  document.getElementById('topics-btn').onclick = ()=>{ document.getElementById('topics-menu').style.display='grid'; document.getElementById('games-menu').style.display='none'; document.getElementById('topic-area').style.display='none'; document.getElementById('game-area').style.display='none'; };
+  document.getElementById('games-btn').onclick = ()=>{ document.getElementById('topics-menu').style.display='none'; document.getElementById('games-menu').style.display='grid'; document.getElementById('topic-area').style.display='none'; document.getElementById('game-area').style.display='none'; };
+
+  updateSubjectIndicator(key);
+}
+
+/* Open single topic */
+function openTopic(subjectKey, topic, index, total){
+  document.getElementById('topics-menu').style.display='none';
+  const area = document.getElementById('topic-area');
+  area.style.display='block';
+  document.getElementById('topic-title').innerText = topic.title;
+  document.getElementById('topic-indicator').innerText = `Tema ${index+1} de ${total}`;
+  const text = generateLongText(topic.title, topic.keywords);
+  document.getElementById('topic-text').innerText = text;
+  document.getElementById('listen-btn').onclick = ()=> speak(text);
+  // mark visited
+  saveProgress(`visited_${subjectKey}_${topic.id}`, true);
+  updateSubjectProgress(subjectKey);
+}
+
+/* Back to topics list */
+function backToTopics(){
+  document.getElementById('topic-area').style.display='none';
+  document.getElementById('topics-menu').style.display='grid';
+}
+
+/* Open single game (renders area with indicator) */
+function openGame(subjectKey, game, index, total){
+  document.getElementById('games-menu').style.display='none';
+  const area = document.getElementById('game-area');
+  area.style.display='block';
+  area.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><h3>${game.title}</h3><div class="small">Juego ${index+1} de ${total}</div></div><div id="game-content" style="margin-top:.6rem"></div><div style="margin-top:.6rem"><button class="btn" onclick="backToGames()">← Volver a juegos</button></div>`;
+  // populate game content based on id
+  renderGame(subjectKey, game.id);
+}
+
+/* Back to games menu */
+function backToGames(){
+  document.getElementById('game-area').style.display='none';
+  document.getElementById('games-menu').style.display='grid';
+}
+
+/* Update progress per subject */
+function updateSubjectProgress(subjectKey){
+  const data = SUBJECTS[subjectKey];
+  let visited=0;
+  data.topics.forEach(t=>{ if(loadProgress(`visited_${subjectKey}_${t.id}`, false)) visited++; });
+  const percent = Math.round(visited/data.topics.length*100);
+  saveProgress(subjectKey, percent);
+  const ind = document.getElementById(subjectKey+'-ind');
+  if(ind) ind.innerText = `${percent}%`;
+  document.getElementById('subject-progress').innerText = `Progreso: ${percent}% (${visited}/${data.topics.length})`;
+}
+
+/* Render game implementations (lightweight) */
+function renderGame(subjectKey, gameId){
+  const gc = document.getElementById('game-content');
+  gc.innerHTML='';
+  // simple switch by gameId prefix
+  if(gameId.startsWith('m_') || gameId.startsWith('s_') || gameId.startsWith('h_') || gameId.startsWith('t_')){
+    // generic quiz placeholder
+    if(gameId.includes('quiz')){
+      const bank = [
+        {q:'Pregunta de ejemplo 1', a:'Respuesta A', o:['Respuesta A','B','C','D']},
+        {q:'Pregunta de ejemplo 2', a:'Respuesta B', o:['Respuesta A','B','C','D']}
+      ];
+      let qs=shuffle(bank), idx=0, score=0, sel=null;
+      const el = document.createElement('div'); el.className='lesson';
+      el.innerHTML = `<div id="gq">—</div><div id="gopts" class="cards" style="margin-top:.6rem"></div><div style="margin-top:.6rem"><button class="btn" id="gstart">Comenzar</button> <button class="btn" id="gnext">Siguiente</button></div><div id="gfb" class="small" style="margin-top:.6rem"></div>`;
+      gc.appendChild(el);
+      function loadQ(){ document.getElementById('gq').innerText = qs[idx].q; const opts=document.getElementById('gopts'); opts.innerHTML=''; shuffle(qs[idx].o).forEach(o=>{ const b=document.createElement('button'); b.className='btn'; b.innerText=o; b.onclick=()=>{ sel=o; [...opts.children].forEach(c=>c.classList.remove('sel')); b.classList.add('sel'); }; opts.appendChild(b); }); document.getElementById('gfb').innerText=''; }
+      el.querySelector('#gstart').onclick=()=>{ qs=shuffle(bank); idx=0; score=0; sel=null; loadQ(); };
+      el.querySelector('#gnext').onclick=()=>{ if(sel===qs[idx].a) score++; document.getElementById('gfb').innerText = 'Puntaje: '+score; idx++; sel=null; if(idx>=qs.length) document.getElementById('gfb').innerText = 'Fin '+score+'/'+qs.length; else loadQ(); };
+      return;
+    }
+  }
+  // handle specific IDs
+  switch(gameId){
+    case 'm_mem':
+    case 's_mem':
+    case 'h_mem':
+    case 't_mem':
+      // memory simple
+      {
+        const div=document.createElement('div'); div.className='lesson';
+        div.innerHTML = `<div id="memboard" style="display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem"></div><div style="margin-top:.6rem"><button class="btn" id="memnew">Nuevo</button></div><div id="memfb" class="small" style="margin-top:.5rem"></div>`;
+        gc.appendChild(div);
+        function genMem(){
+          const board = document.getElementById('memboard'); board.innerHTML='';
+          const pairs=[]; for(let i=0;i<8;i++){ const a=rand(1,20), b=rand(1,10); pairs.push({q:`${a}+${b}`,a:a+b}); }
+          const cards=[]; pairs.forEach((p,idx)=>{ cards.push({t:p.q,id:idx}); cards.push({t:String(p.a),id:idx}); });
+          shuffle(cards).forEach(c=>{ const b=document.createElement('button'); b.className='btn'; b.innerText=c.t; b.dataset.id=c.id; b.onclick=memClick; board.appendChild(b); });
+          window._sel=null; document.getElementById('memfb').innerText='';
+        }
+        function memClick(e){ const el=e.currentTarget; if(el.classList.contains('sel')) return; el.classList.add('sel'); if(!window._sel){ window._sel=el; return; } const a=window._sel, b=el; if(a.dataset.id===b.dataset.id && a.innerText!==b.innerText){ a.style.visibility='hidden'; b.style.visibility='hidden'; document.getElementById('memfb').innerText='Emparejado'; } else { a.classList.remove('sel'); b.classList.remove('sel'); document.getElementById('memfb').innerText='No coincide'; } window._sel=null;}
+        div.querySelector('#memnew').onclick=genMem; genMem();
+      }
+      break;
+    case 'm_order':
+    case 's_order':
+    case 'h_timeline':
+    case 't_code':
+      {
+        const div=document.createElement('div'); div.className='lesson';
+        div.innerHTML = `<div id="orderpool" class="cards"></div><div style="margin-top:.6rem"><button class="btn" id="ordergen">Generar</button> <button class="btn" id="ordercheck">Comprobar</button></div><div id="orderfb" class="small" style="margin-top:.5rem"></div>`;
+        gc.appendChild(div);
+        const items = [{t:'Paso 1',o:1},{t:'Paso 2',o:2},{t:'Paso 3',o:3}];
+        function gen(){ const pool=document.getElementById('orderpool'); pool.innerHTML=''; shuffle(items).forEach(it=>{ const d=document.createElement('div'); d.className='pill'; d.innerText=it.t; d.dataset.order=it.o; pool.appendChild(d); }); }
+        function check(){ const pool=document.getElementById('orderpool'); const arr=[...pool.children].map(n=>Number(n.dataset.order)); const ok = arr.join(',')===items.map(x=>x.o).join(','); document.getElementById('orderfb').innerText = ok ? 'Orden correcto' : 'Orden incorrecto'; }
+        div.querySelector('#ordergen').onclick=gen; div.querySelector('#ordercheck').onclick=check; gen();
+      }
+      break;
+    case 'm_puzzle':
+    case 't_circuit':
+      {
+        const div=document.createElement('div'); div.className='lesson';
+        div.innerHTML = `<div id="parea">Presiona generar</div><div style="margin-top:.6rem"><button class="btn" id="pgen">Generar</button></div><div id="pfb" class="small" style="margin-top:.5rem"></div>`;
+        gc.appendChild(div);
+        div.querySelector('#pgen').onclick=()=>{ const a=rand(2,12), b=rand(2,12); document.getElementById('parea').innerText = `Resuelve: ${a} × ${b} = ?`; const ans=a*b; const ip=document.createElement('input'); ip.className='mono'; ip.style.width='6rem'; div.appendChild(ip); const chk=document.createElement('button'); chk.className='btn'; chk.innerText='Comprobar'; chk.onclick=()=>{ if(Number(ip.value)===ans) document.getElementById('pfb').innerText='¡Correcto!'; else document.getElementById('pfb').innerText='Incorrecto, era '+ans; }; div.appendChild(chk); };
+      }
+      break;
+    case 's_lab':
+      {
+        const div=document.createElement('div'); div.className='lesson';
+        div.innerHTML = `<div id="labpool" class="cards"></div><div style="margin-top:.6rem"><button class="btn" id="labgen">Reponer</button></div><div id="labfb" class="small" style="margin-top:.5rem"></div>`;
+        gc.appendChild(div);
+        div.querySelector('#labgen').onclick=()=>{ const pool=document.getElementById('labpool'); pool.innerHTML=''; const items=['Vinagre','Bicarbonato','Agua','Sal']; shuffle(items).forEach(it=>{ const d=document.createElement('div'); d.className='pill'; d.innerText=it; pool.appendChild(d); }); document.getElementById('labfb').innerText='Elementos listos.'; };
+      }
+      break;
+    case 's_class':
+      {
+        const div=document.createElement('div'); div.className='lesson';
+        div.innerHTML = `<div id="classpool" class="cards"></div><div style="margin-top:.6rem"><button class="btn" id="classgen">Generar</button></div><div id="classfb" class="small"></div>`;
+        gc.appendChild(div);
+        div.querySelector('#classgen').onclick=()=>{ const p=document.getElementById('classpool'); p.innerHTML=''; const items=[{n:'Perro',c:'mam'},{n:'Águila',c:'ave'},{n:'Trucha',c:'pez'}]; shuffle(items).forEach(it=>{ const d=document.createElement('div'); d.className='pill'; d.innerText=it.n; p.appendChild(d); }); document.getElementById('classfb').innerText='Clasifica mentalmente.'; };
+      }
+      break;
+    case 's_planet':
+      {
+        const div=document.createElement('div'); div.className='lesson';
+        div.innerHTML = `<div id="planetclue" class="small">—</div><div id="planetopts" class="cards" style="margin-top:.6rem"></div><div style="margin-top:.6rem"><button class="btn" id="planetnew">Nuevo</button></div><div id="planetfb" class="small"></div>`;
+        gc.appendChild(div);
+        div.querySelector('#planetnew').onclick=()=>{ const planets=[{n:'Marte',c:'Rojo'},{n:'Júpiter',c:'Grande'},{n:'Venus',c:'Caliente'}]; const p=planets[rand(0,planets.length-1)]; document.getElementById('planetclue').innerText = p.c; const opts=document.getElementById('planetopts'); opts.innerHTML=''; shuffle(planets.map(x=>x.n)).forEach(n=>{ const b=document.createElement('button'); b.className='btn'; b.innerText=n; b.onclick=()=>document.getElementById('planetfb').innerText = (n===p.n)?'Correcto':'Incorrecto'; opts.appendChild(b); }); };
+      }
+      break;
+    case 't_pc':
+      {
+        const div=document.createElement('div'); div.className='lesson';
+        div.innerHTML = `<div id="pcparts" class="cards"></div><div style="margin-top:.6rem"><button class="btn" id="pcgen">Reponer</button></div><div id="pcfb" class="small"></div>`;
+        gc.appendChild(div);
+        div.querySelector('#pcgen').onclick=()=>{ const pool=document.getElementById('pcparts'); pool.innerHTML=''; const parts=['CPU','RAM','GPU','SSD']; shuffle(parts).forEach(p=>{ const d=document.createElement('div'); d.className='pill'; d.innerText=p; pool.appendChild(d); }); document.getElementById('pcfb').innerText='Piezas listadas.'; };
+      }
+      break;
+    case 't_robot':
+      {
+        const div=document.createElement('div'); div.className='lesson';
+        div.innerHTML = `<div id="robotcmds" class="cards"></div><canvas id="robotcanvas" width="480" height="200" style="background:rgba(255,255,255,0.02);border-radius:8px;margin-top:.6rem"></canvas><div style="margin-top:.6rem"><button class="btn" id="robotrun">Ejecutar</button> <button class="btn" id="robotreset">Reset</button></div><div id="robotfb" class="small"></div>`;
+        gc.appendChild(div);
+        const cmds=['Avanzar','Girar','Saltar'];
+        const pool=document.getElementById('robotcmds');
+        cmds.forEach(c=>{ const d=document.createElement('div'); d.className='pill'; d.innerText=c; d.onclick=()=>{ const p=document.createElement('div'); p.className='pill'; p.innerText=c; p.onclick=()=>p.remove(); pool.appendChild(p); }; pool.appendChild(d); });
+        const canvas = document.getElementById('robotcanvas'), ctx=canvas.getContext('2d');
+        const grid=8, cell=canvas.width/grid; let robot={x:0,y:0};
+        function draw(){ ctx.clearRect(0,0,canvas.width,canvas.height); ctx.fillStyle='rgba(255,255,255,0.03)'; for(let i=0;i<grid;i++) for(let j=0;j<grid;j++) ctx.fillRect(i*cell+2,j*cell+2,cell-4,cell-4);
+          ctx.fillStyle='#facc15'; ctx.fillRect(robot.x*cell+6,robot.y*cell+6,cell-12,cell-12);
+        }
+        draw();
+        document.getElementById('robotrun').onclick=()=>{ const seq=[...pool.querySelectorAll('.pill')].map(n=>n.innerText); robot={x:0,y:0}; draw(); let i=0; function step(){ if(i>=seq.length){ document.getElementById('robotfb').innerText='Terminado'; return; } const cmd=seq[i++]; if(cmd==='Avanzar') robot.x=Math.min(grid-1,robot.x+1); if(cmd==='Girar') robot.y=Math.min(grid-1,robot.y+1); if(cmd==='Saltar') robot.x=Math.min(grid-1,robot.x+2); draw(); setTimeout(step,400); } step(); };
+        document.getElementById('robotreset').onclick=()=>{ pool.innerHTML=''; cmds.forEach(c=>{ const d=document.createElement('div'); d.className='pill'; d.innerText=c; d.onclick=()=>{ const p=document.createElement('div'); p.className='pill'; p.innerText=c; p.onclick=()=>p.remove(); pool.appendChild(p); }; pool.appendChild(d); }); robot={x:0,y:0}; draw(); document.getElementById('robotfb').innerText=''; };
+      }
+      break;
+    default:
+      gc.innerHTML = '<div class="lesson">Juego en construcción.</div>';
+  }
+}
+
+/* Helpers and init */
+function rand(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+function shuffle(a){const b=a.slice(); for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];} return b;}
+
+/* Subject indicators on home */
+function updateSubjectIndicator(key){
+  const p = loadProgress(key,0);
+  const el = document.getElementById(key+'-ind');
+  if(el) el.innerText = p? (p+'%') : '';
+}
+
+/* Export/import/reset bindings */
+window.exportProgress = exportProgress;
+window.importProgress = importProgress;
+window.resetAll = resetAll;
+
+/* Start */
+document.addEventListener('DOMContentLoaded', ()=>{
+  showSection('home');
+  Object.keys(SUBJECTS).forEach(k=>updateSubjectIndicator(k));
+});
+
+/* Expose functions */
+window.openSubject = openSubject;
+window.backToTopics = backToTopics;
+window.openGame = openGame;
+window.backToGames = backToGames;
+window.speak = speak;
+window.stopSpeech = stopSpeech;
+
+</script>
+</body>
+</html>
